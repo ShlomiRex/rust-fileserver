@@ -1,5 +1,6 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read}};
+use std::{net::{TcpListener, TcpStream}, io::{Read, Write}};
 use std::fs;
+use bytes::{BytesMut, BufMut};
 use proto::RequestCodes;
 
 const BUF_SIZE : usize = 1024;
@@ -50,18 +51,28 @@ impl Server {
 		println!("Read {} bytes, client requests: {}", bytes_read, req_str);
 
 		if buf[0] == RequestCodes::LIST_DIR {
-			self.list_dir();
+			self.list_dir(tcp_stream);
 		} else if buf[0] == RequestCodes::FILE_DOWNLOAD {
 			//TODO: Add stuff
 		}
 
 	}
 
-	fn list_dir(&self) {
-		let dir_path = String::from("C:\\Users\\Shlomi\\Desktop\\");
+	fn list_dir(&self, tcp_stream: &mut TcpStream) {
+		let dir_path = String::from("C:\\Users\\Shlomi\\Desktop\\"); //TODO: Fow now, only for testing, we use this.
 		let paths = fs::read_dir(dir_path).unwrap();
+
+		let mut buf = BytesMut::new();
+
 		for path in paths {
-			println!("{}", path.unwrap().path().display());
+			let p = path.unwrap().path();
+			println!("{}", p.display());
+			buf.put(p.into_os_string().into_string().unwrap().as_bytes());
+			buf.put(&b"\n"[..]);
 		}
+		let bytes_written = tcp_stream.write(&buf).unwrap();
+		println!("Sent {} bytes", bytes_written);
 	}
+
+
 }
