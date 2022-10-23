@@ -62,16 +62,30 @@ impl Server {
 		let dir_path = String::from("C:\\Users\\Shlomi\\Desktop\\"); //TODO: Fow now, only for testing, we use this.
 		let paths = fs::read_dir(dir_path).unwrap();
 
+		let mut paths_vec: Vec<String> = Vec::new();
+		let mut total_bytes_to_write: usize = 0;
 		let mut buf = BytesMut::new();
 
+		// Determine amount of bytes to send
 		for path in paths {
-			let p = path.unwrap().path();
-			println!("{}", p.display());
-			buf.put(p.into_os_string().into_string().unwrap().as_bytes());
-			buf.put(&b"\n"[..]);
+			let mut p2 = path.unwrap().path().into_os_string().into_string().unwrap();
+			p2.push('\n');
+			total_bytes_to_write += p2.len();
+			paths_vec.push(p2);
 		}
+
+		// Send client amount of bytes to read
+		buf.put_u32(total_bytes_to_write as u32);
+
+		// Push to send buffer
+		for x in paths_vec {
+			buf.put(x.as_bytes());
+		}
+		
+		// Send
 		let bytes_written = tcp_stream.write(&buf).unwrap();
 		println!("Sent {} bytes", bytes_written);
+		
 	}
 
 

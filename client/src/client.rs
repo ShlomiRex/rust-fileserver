@@ -2,7 +2,7 @@ use std::{net::TcpStream, io::{Write, Read}};
 use bytes::{BytesMut, BufMut};
 use proto::RequestCodes;
 
-const BUF_SIZE : usize = 1024;
+const BUF_SIZE : usize = 256;
 
 pub struct Client {
 	server_addr: String,
@@ -27,10 +27,13 @@ impl Client {
 		tcp_stream.write(&buf).expect("Couldn't send request");
 
 		// Get response
-		let mut list_dir_buf = [0;BUF_SIZE];
-		let bytes_read = tcp_stream.read(&mut list_dir_buf).unwrap();
-		println!("Received {} bytes", bytes_read);
-		println!("{}", std::str::from_utf8(&list_dir_buf).unwrap());
-		
+		let mut list_dir_size_buf = [0;4];
+		tcp_stream.read_exact(&mut list_dir_size_buf).unwrap();
+
+		let list_dir_size = u32::from_be_bytes(list_dir_size_buf);
+
+		let mut vec = vec![0; list_dir_size as usize];
+		tcp_stream.read_exact(&mut vec).unwrap();
+		println!("{}", std::str::from_utf8(&vec).unwrap());
 	}
 }
